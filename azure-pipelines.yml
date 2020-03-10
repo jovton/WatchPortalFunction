@@ -1,0 +1,81 @@
+# .NET Core Function App to Windows on Azure
+# Build a .NET Core function app and deploy it to Azure as a Windows function App.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- master
+
+variables:
+  # Agent VM image name
+  vmImageName: 'vs2017-win2016'
+
+  # Working Directory
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+stages:
+- stage: Build
+  displayName: Build stage
+
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+
+    steps:
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: 'Azure DevOps'
+        keyVaultName: 'jovton-learn-keyvault'
+        secretsFilter: '*'
+    - task: DotNetCoreCLI@2
+      displayName: Build WatchPortalFunction
+      inputs:
+        command: 'build'
+        projects: |
+          $(workingDirectory)/WatchPortalFunction/*.csproj
+        arguments: --output $(System.DefaultWorkingDirectory)/WatchPortalFunction/publish_output --configuration Release
+    - task: DotNetCoreCLI@2
+      displayName: Run Tests
+      inputs:
+        command: test
+        projects: '**/*Tests/*.csproj'
+        arguments: '--configuration $(buildConfiguration) --collect "Code coverage"'
+    
+    - task: ArchiveFiles@2
+      displayName: 'Archive WatchPortalFunction files'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)/WatchPortalFunction/publish_output'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/WatchPortalFunction/$(Build.BuildId).zip
+        replaceExistingArchive: true
+
+    - publish: $(Build.ArtifactStagingDirectory)/WatchPortalFunction/$(Build.BuildId).zip
+      artifact: drop
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  condition: succeeded()
+
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy
+    environment: 'development'
+    pool:
+      vmImage: $(vmImageName)
+
+    strategy:
+      runOnce:
+        deploy:
+
+          steps:
+          - task: AzureFunctionApp@1
+            displayName: 'Azure functions app deploy'
+            inputs:
+              azureSubscription: 'Azure DevOps'
+              appType: functionApp
+              appName: $(WPF-FUNC-NAME}
+              package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
