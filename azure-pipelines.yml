@@ -72,6 +72,11 @@ stages:
         deploy:
 
           steps:
+          - task: AzureKeyVault@1
+            inputs:
+              azureSubscription: 'Azure DevOps'
+              keyVaultName: 'jovton-learn-keyvault'
+              secretsFilter: '*'
           - task: AzureFunctionApp@1
             displayName: 'Azure functions app deploy'
             inputs:
