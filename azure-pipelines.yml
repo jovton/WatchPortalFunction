@@ -27,7 +27,7 @@ stages:
     - task: AzureKeyVault@1
       inputs:
         azureSubscription: 'Azure DevOps'
-        keyVaultName: 'jovton-learn-keyvault'
+        keyVaultName: 'jovton-learn-kv'
         secretsFilter: '*'
     - task: DotNetCoreCLI@2
       displayName: Build WatchPortalFunction
