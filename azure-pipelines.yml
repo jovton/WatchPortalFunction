@@ -82,5 +82,5 @@ stages:
             inputs:
               azureSubscription: 'Azure DevOps'
               appType: functionApp
-              appName: ${WPF-FUNC-NAME}
+              appName: $(WPF-FUNC-NAME)
               package: '$(Pipeline.Workspace)/drop/$(Build.BuildId).zip'
